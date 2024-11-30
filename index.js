@@ -1,20 +1,28 @@
-require("dotenv").config();
+require("dotenv").config(); // mon serveur peut à présent utilise les variables contenues dans .env
 
 const express = require("express");
+const mongoose = require("mongoose");
 const app = express(); // création du serveur
 const axios = require("axios");
 const cors = require("cors");
 
 app.use(cors());
+app.use(express.json());
+
+mongoose.connect(process.env.MONGO_URI);
+
+// import de mes router
+const userRouter = require("./routes/user");
+const favoriteRouter = require("./routes/favorite");
 
 app.get("/", (req, res) => {
   try {
     return res.status(200).json("Bienvenue sur le serveur Marvel");
-    console.log(process.env.API_KEY);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 });
+
 
 app.get("/character/:characterId", async (req, res) => {
   try {
@@ -25,10 +33,6 @@ app.get("/character/:characterId", async (req, res) => {
         "?apiKey=" +
         process.env.API_KEY
     );
-
-    // le serveur peut recevoir les query skip, limit et name du front
-    console.log("query =>", req.query); // { name: 'spider' }
-    // récupérer la réponse et la renvoyer au front
     return res.status(200).json(response.data);
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -44,8 +48,6 @@ app.get("/comic/:comicId", async (req, res) => {
         "?apiKey=" +
         process.env.API_KEY
     );
-    // le serveur peut recevoir les query skip, limit et name du front
-    console.log("query =>", req.query); // { name: 'spider' }
     // récupérer la réponse et la renvoyer au front
     return res.status(200).json(response.data);
   } catch (error) {
@@ -56,9 +58,6 @@ app.get("/comic/:comicId", async (req, res) => {
 app.get("/characters", async (req, res) => {
   try {
     let limit = 100;
-
-    // le serveur peut recevoir les query skip, limit et name du front
-    console.log("query =>", req.query); // { name: 'spider' }
 
     // mise en place des query "skip", "limit" et "name"
     let filters = "";
@@ -89,13 +88,6 @@ app.get("/characters", async (req, res) => {
 
 app.get("/comics", async (req, res) => {
   try {
-    // recevoir la requete du front (avec possiblement les query pour le skip -pagination- et title -filtres-)
-    // envoyer la requete a l'API
-    // let limit = 100;
-
-    // le serveur peut recevoir les query page, limit et title du front
-    console.log("query =>", req.query); // { title: 'spider' }
-
     // gérer l'envoi ou non des filtres (skip et title)
     let filters = "";
     if (req.query.title) {
@@ -124,9 +116,6 @@ app.get("/comics", async (req, res) => {
 
 app.get("/comics/:characterId", async (req, res) => {
   try {
-    // récupérer l'id d'un personnage :
-    console.log(req.params);
-
     // mettre cet id dans la requete envoyée à l'API Marvel :
     const response = await axios.get(
       "https://lereacteur-marvel-api.herokuapp.com/comics/" +
@@ -139,6 +128,10 @@ app.get("/comics/:characterId", async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 });
+
+app.use(userRouter);
+app.use(favoriteRouter);
+
 
 app.all("*", (req, res) => {
   return res.status(404).json("Not found");
